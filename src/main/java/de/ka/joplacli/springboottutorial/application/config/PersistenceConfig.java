@@ -1,4 +1,4 @@
-package de.ka.joplacli.springboottutorial.application.persistence;
+package de.ka.joplacli.springboottutorial.application.config;
 
 import javax.sql.DataSource;
 
