@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration
-@ComponentScan(basePackages = { "de.ka.joplacli.springboottutorial" })
+@ComponentScan(basePackages = { "de.ka.joplacli.springboottutorial.batch.csv.config", "de.ka.joplacli.springboottutorial.batch.csv.listener", "de.ka.joplacli.springboottutorial.batch.csv.scheduled" })
 @EnableScheduling
 public class AppConfig {
 
