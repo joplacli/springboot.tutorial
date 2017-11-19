@@ -15,9 +15,12 @@ import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 
 import de.ka.joplacli.springboottutorial.batch.csv.dto.Person;
 import de.ka.joplacli.springboottutorial.batch.csv.listener.JobCompletionNotificationListener;
@@ -27,63 +30,67 @@ import de.ka.joplacli.springboottutorial.batch.csv.processor.PersonItemProcessor
 @EnableBatchProcessing
 public class BatchConfiguration {
 	 @Autowired
-	    public JobBuilderFactory jobBuilderFactory;
+    public JobBuilderFactory jobBuilderFactory;
 
-	    @Autowired
-	    public StepBuilderFactory stepBuilderFactory;
+    @Autowired
+    public StepBuilderFactory stepBuilderFactory;
 
-	    @Autowired
-	    public DataSource dataSource;
+    @Autowired
+    public DataSource dataSource;
+    
+    @Value("${springtutorial.filePath}")
+    private String personFilePath;
 
-	    // tag::readerwriterprocessor[]
-	    @Bean
-	    public FlatFileItemReader<Person> reader() {
-	        FlatFileItemReader<Person> reader = new FlatFileItemReader<Person>();
-	        reader.setResource(new ClassPathResource("sample-data.csv"));
-	        reader.setLineMapper(new DefaultLineMapper<Person>() {{
-	            setLineTokenizer(new DelimitedLineTokenizer() {{
-	                setNames(new String[] { "firstName", "lastName" });
-	            }});
-	            setFieldSetMapper(new BeanWrapperFieldSetMapper<Person>() {{
-	                setTargetType(Person.class);
-	            }});
-	        }});
-	        return reader;
-	    }
+    // tag::readerwriterprocessor[]
+    @Bean
+    public FlatFileItemReader<Person> reader() {
+        FlatFileItemReader<Person> reader = new FlatFileItemReader<Person>();
+        Resource resource = new FileSystemResource(personFilePath);
+        reader.setResource(resource);
+        reader.setLineMapper(new DefaultLineMapper<Person>() {{
+            setLineTokenizer(new DelimitedLineTokenizer() {{
+                setNames(new String[] { "firstName", "lastName" });
+            }});
+            setFieldSetMapper(new BeanWrapperFieldSetMapper<Person>() {{
+                setTargetType(Person.class);
+            }});
+        }});
+        return reader;
+    }
 
-	    @Bean
-	    public PersonItemProcessor processor() {
-	        return new PersonItemProcessor();
-	    }
+    @Bean
+    public PersonItemProcessor processor() {
+        return new PersonItemProcessor();
+    }
 
-	    @Bean
-	    public JdbcBatchItemWriter<Person> writer() {
-	        JdbcBatchItemWriter<Person> writer = new JdbcBatchItemWriter<Person>();
-	        writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<Person>());
-	        writer.setSql("INSERT INTO people (first_name, last_name) VALUES (:firstName, :lastName)");
-	        writer.setDataSource(dataSource);
-	        return writer;
-	    }
-	    // end::readerwriterprocessor[]
+    @Bean
+    public JdbcBatchItemWriter<Person> writer() {
+        JdbcBatchItemWriter<Person> writer = new JdbcBatchItemWriter<Person>();
+        writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<Person>());
+        writer.setSql("INSERT INTO people (first_name, last_name) VALUES (:firstName, :lastName)");
+        writer.setDataSource(dataSource);
+        return writer;
+    }
+    // end::readerwriterprocessor[]
 
-	    // tag::jobstep[]
-	    @Bean
-	    public Job importUserJob(JobCompletionNotificationListener listener) {
-	        return jobBuilderFactory.get("importUserJob")
-	                .incrementer(new RunIdIncrementer())
-	                .listener(listener)
-	                .flow(step1())
-	                .end()
-	                .build();
-	    }
+    // tag::jobstep[]
+    @Bean
+    public Job importUserJob(JobCompletionNotificationListener listener) {
+        return jobBuilderFactory.get("importUserJob")
+                .incrementer(new RunIdIncrementer())
+                .listener(listener)
+                .flow(step1())
+                .end()
+                .build();
+    }
 
-	    @Bean
-	    public Step step1() {
-	        return stepBuilderFactory.get("step1")
-	                .<Person, Person> chunk(10)
-	                .reader(reader())
-	                .processor(processor())
-	                .writer(writer())
-	                .build();
-	    }
+    @Bean
+    public Step step1() {
+    	return stepBuilderFactory.get("step1")
+                .<Person, Person> chunk(10)
+                .reader(reader())
+                .processor(processor())
+                .writer(writer())
+                .build();
+    }
 }
